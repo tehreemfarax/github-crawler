@@ -64,18 +64,18 @@ With the provided `docker-compose.yml`:
 - Port: **5432**
 - User: **postgres-user-name**
 - Password: **postgres-password**
-- DB: **geniesign-db**
+- DB: **ghcrawler**
 
 Connection string examples:
 
 - psql:
 ```bash
-psql postgresql://postgres-user-name:postgres-password@localhost:5432/geniesign-db
+psql postgresql://postgres-user-name:postgres-password@localhost:5432/ghcrawler
 ```
 
 - psycopg (Python DSN):
 ```
-postgresql://postgres-user-name:postgres-password@localhost:5432/geniesign-db
+postgresql://postgres-user-name:postgres-password@localhost:5432/ghcrawler
 ```
 
 > For GitHub Actions, the app connects to the service container via host `localhost` and port `5432` thanks to `services: postgres:` with published port.

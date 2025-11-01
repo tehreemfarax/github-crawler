@@ -2,7 +2,7 @@ import os
 import psycopg
 from pathlib import Path
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres-user-name:postgres-password@localhost:5432/gitcrawler")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres-user-name:postgres-password@localhost:5432/ghcrawler")
 
 def main():
     sql = Path("src/ghcrawler/models.sql").read_text()
