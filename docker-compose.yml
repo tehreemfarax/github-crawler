@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis-db-data:/data
+
+  postgres:
+    image: postgres:18
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres-user-name
+      POSTGRES_PASSWORD: postgres-password
+      POSTGRES_DB: gitcrawler
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-db-data:/var/lib/postgresql
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: saad@geniesign.io
+      PGADMIN_DEFAULT_PASSWORD: saad@geniesign.io
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - ./pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+
+volumes:
+  redis-db-data:
+  postgres-db-data:
+  pgadmin-data:
