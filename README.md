@@ -39,15 +39,13 @@ python scripts/init_db.py
 
 ### 4) Run the crawler (fetch 100k repos)
 ```bash
-python -m gitcrawler.crawl_stars --target 100000
+python -m gitcrawler.crawl_stars
 ```
 
-To do a quick local test (e.g., 100 repos from the last 30 days) and avoid a long bucket build:
+To do a quick local smoke test without a long bucket build, scope the query and rely on the 1k GraphQL cap:
 
 ```bash
-python -m gitcrawler.crawl_stars --target 100 --recent-days 30 --bucket-threshold 5000
-# or, for the simplest path with one search query:
-python -m gitcrawler.crawl_stars --target 100 --recent-days 30 --simple
+python -m gitcrawler.crawl_stars --recent-days 30 --simple
 ```
 
 ### 5) Export as CSV
@@ -94,7 +92,8 @@ This gives efficient reads for the current view and a compact history for trend 
 - Use GraphQL `search(type: REPOSITORY)` with **dynamic time bucketing** on `created:` range.
 - Recursively split time windows whenever `approximateResultCount >= 1000` until each window fetches < 1000.
 - Within each window, paginate with cursors until exhausted.
-- Stop once we reach `--target` repositories (default 100,000).
+- Stop once we reach the fixed 100,000 repository target.
+- Determine the worker fan-out by sampling the current rate limit, computing `ceil(2,100,000 / limit)`, and running that many independent jobs in parallel; each job buffers its results and a single writer flushes them to Postgres after all jobs finish.
 
 ### Reliability
 - **Rate-limit aware**: reads `rateLimit` from GraphQL and sleeps when near exhaustion.

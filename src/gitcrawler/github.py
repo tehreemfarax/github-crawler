@@ -53,8 +53,19 @@ query Repo($owner: String!, $name: String!) {
 }
 '''
 
+RATE_LIMIT_QUERY = '''
+query CurrentRateLimit {
+  rateLimit {
+    limit
+    cost
+    remaining
+    resetAt
+  }
+}
+'''
+
 def _headers():
-    token = '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' or ""
+    token = SETTINGS.github_token or ""
     if not token:
         raise RuntimeError(
             "Missing GitHub token. Set GITHUB_TOKEN in your environment or .env file."
@@ -72,14 +83,22 @@ def count_for_query(q: str) -> int:
     data = gql(COUNT_QUERY, {"q": q})
     return data["data"]["search"]["repositoryCount"]
 
-def iter_search(q: str):
+def get_rate_limit() -> Dict[str, Any]:
+    data = gql(RATE_LIMIT_QUERY, {})
+    return data["data"]["rateLimit"]
+
+def iter_search(q: str, max_items: Optional[int] = None):
     cursor = None
+    yielded = 0
     while True:
         data = gql(SEARCH_QUERY, {"q": q, "cursor": cursor})
         rl = data["data"]["rateLimit"]
         search = data["data"]["search"]
         for n in search["nodes"]:
             yield n
+            yielded += 1
+            if max_items is not None and yielded >= max_items:
+                return
         if not search["pageInfo"]["hasNextPage"]:
             break
         cursor = search["pageInfo"]["endCursor"]

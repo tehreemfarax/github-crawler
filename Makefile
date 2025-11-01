@@ -13,7 +13,7 @@ db-init:
 	python scripts/init_db.py
 
 crawl:
-	python -m gitcrawler.crawl_stars --target 100000
+	python -m gitcrawler.crawl_stars
 
 export:
 	python -m gitcrawler.crawl_stars --export csv --out data/export.csv

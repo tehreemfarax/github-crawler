@@ -52,7 +52,7 @@ jobs:
       - name: Crawl 100k repos
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python -m gitcrawler.crawl_stars --target 100000
+        run: python -m gitcrawler.crawl_stars
 
       - name: Export CSV
         run: python -m gitcrawler.crawl_stars --export csv --out data/export.csv
