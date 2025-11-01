@@ -85,12 +85,22 @@ def main():
         return
 
     bucket_end = date.today()
-    if args.simple:
+    simple_mode = args.simple
+    if simple_mode:
         query = f"created:>={since.isoformat()} sort:stars"
-        print(f"Running simple crawl with query '{query}' (target={args.target}).")
-        buckets = [(since, bucket_end)]
-        bucket_iter = [(since, bucket_end)]
-    else:
+        repo_count = count_for_query(query)
+        effective_target = min(args.target, repo_count)
+        if effective_target > 1000:
+            print(
+                f"Simple search is limited to the first 1000 results (query matched ≈{repo_count}). Switching to bucketed crawl to reach the requested target.",
+                flush=True,
+            )
+            simple_mode = False
+        else:
+            print(f"Running simple crawl with query '{query}' (target={args.target}).")
+            buckets = [(since, bucket_end)]
+            bucket_iter = buckets
+    if not simple_mode:
         print(f"Building creation date buckets from {since.isoformat()} to {bucket_end.isoformat()} (threshold={args.bucket_threshold})... this may take a minute.")
         buckets = build_buckets(since, bucket_end, threshold=args.bucket_threshold)
         print(f"Built {len(buckets)} buckets. Starting crawl...")
@@ -101,7 +111,7 @@ def main():
     with get_conn() as conn:
         bucket_progress = tqdm(bucket_iter, desc="Buckets", unit="bucket")
         for (start, end) in bucket_progress:
-            if args.simple:
+            if simple_mode:
                 q = f"created:>={since.isoformat()} sort:stars"
             else:
                 q = f"created:{start.isoformat()}..{end.isoformat()}"
