@@ -39,20 +39,20 @@ python scripts/init_db.py
 
 ### 4) Run the crawler (fetch 100k repos)
 ```bash
-python -m ghcrawler.crawl_stars --target 100000
+python -m gitcrawler.crawl_stars --target 100000
 ```
 
 To do a quick local test (e.g., 100 repos from the last 30 days) and avoid a long bucket build:
 
 ```bash
-python -m ghcrawler.crawl_stars --target 100 --recent-days 30 --bucket-threshold 5000
+python -m gitcrawler.crawl_stars --target 100 --recent-days 30 --bucket-threshold 5000
 # or, for the simplest path with one search query:
-python -m ghcrawler.crawl_stars --target 100 --recent-days 30 --simple
+python -m gitcrawler.crawl_stars --target 100 --recent-days 30 --simple
 ```
 
 ### 5) Export as CSV
 ```bash
-python -m ghcrawler.crawl_stars --export csv --out data/export.csv
+python -m gitcrawler.crawl_stars --export csv --out data/export.csv
 ```
 
 ---
@@ -64,18 +64,18 @@ With the provided `docker-compose.yml`:
 - Port: **5432**
 - User: **postgres-user-name**
 - Password: **postgres-password**
-- DB: **ghcrawler**
+- DB: **gitcrawler**
 
 Connection string examples:
 
 - psql:
 ```bash
-psql postgresql://postgres-user-name:postgres-password@localhost:5432/ghcrawler
+psql postgresql://postgres-user-name:postgres-password@localhost:5432/gitcrawler
 ```
 
 - psycopg (Python DSN):
 ```
-postgresql://postgres-user-name:postgres-password@localhost:5432/ghcrawler
+postgresql://postgres-user-name:postgres-password@localhost:5432/gitcrawler
 ```
 
 > For GitHub Actions, the app connects to the service container via host `localhost` and port `5432` thanks to `services: postgres:` with published port.

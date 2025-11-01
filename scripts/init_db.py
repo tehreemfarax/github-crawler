@@ -2,10 +2,10 @@ import os
 import psycopg
 from pathlib import Path
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres-user-name:postgres-password@localhost:5432/ghcrawler")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres-user-name:postgres-password@localhost:5432/gitcrawler")
 
 def main():
-    sql = Path("src/ghcrawler/models.sql").read_text()
+    sql = Path("src/gitcrawler/models.sql").read_text()
     with psycopg.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
             cur.execute(sql)

@@ -17,7 +17,7 @@ services:
     environment:
       POSTGRES_USER: postgres-user-name
       POSTGRES_PASSWORD: postgres-password
-      POSTGRES_DB: ghcrawler
+      POSTGRES_DB: gitcrawler
     ports:
       - "5432:5432"
     volumes:
