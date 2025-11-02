@@ -90,8 +90,8 @@ This gives efficient reads for the current view and a compact history for trend 
 
 ### Crawling strategy (to overcome search 1k cap)
 - Use GraphQL `search(type: REPOSITORY)` with **dynamic time bucketing** on `created:` range.
-- Recursively split time windows whenever `approximateResultCount >= 1000` until each window fetches < 1000.
-- Within each window, paginate with cursors until exhausted.
+- Split ranges iteratively while total bucket coverage is <≈140% of the target so we avoid scanning the entire history on every run.
+- Within each accepted bucket (≤ threshold or single day), paginate with cursors until exhausted.
 - Stop once we reach the fixed 100,000 repository target.
 - Determine the worker fan-out by sampling the current rate limit, computing `ceil(2,100,000 / limit)`, and running that many independent jobs in parallel; each job buffers its results and a single writer flushes them to Postgres after all jobs finish.
 

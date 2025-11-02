@@ -14,6 +14,7 @@ from .utils import TransientError
 
 TARGET_REPOS = 100_000
 JOB_DIVISOR = 2_100_000
+BUCKET_OVERSHOOT = 1.4
 
 
 @dataclass(frozen=True)
@@ -23,13 +24,11 @@ class Bucket:
     approx_count: int
 
 
-def split_buckets(start: date, end: date, threshold: int = 900) -> List[Bucket]:
-    """Recursively split creation date ranges so each bucket stays under the threshold."""
+def _count_range(start: date, end: date) -> int:
     q = f"created:{start.isoformat()}..{end.isoformat()}"
     for attempt in range(6):
         try:
-            count = count_for_query(q)
-            break
+            return count_for_query(q)
         except TransientError as exc:
             wait_seconds = min(300, 30 * (attempt + 1))
             print(
@@ -37,20 +36,42 @@ def split_buckets(start: date, end: date, threshold: int = 900) -> List[Bucket]:
                 flush=True,
             )
             time.sleep(wait_seconds)
-    else:
-        raise
-    if count <= threshold or start >= end:
-        print(f"Accepted bucket {start.isoformat()}..{end.isoformat()} (≈{count} repos)", flush=True)
-        return [Bucket(start, end, count)]
-    print(f"Splitting bucket {start.isoformat()}..{end.isoformat()} (≈{count} repos)", flush=True)
-    mid = start + (end - start) / 2
-    left = split_buckets(start, mid, threshold)
-    right = split_buckets(mid + timedelta(days=1), end, threshold)
-    return left + right
+    raise TransientError(f"Failed to count range {q} after multiple retries.")
 
 
-def build_buckets(start: date, end: date, threshold: int) -> List[Bucket]:
-    return split_buckets(start, end, threshold=threshold)
+def split_buckets(start: date, end: date, threshold: int, target: int, overshoot: float) -> List[Bucket]:
+    """Iteratively split ranges until each bucket is under threshold or we have enough coverage."""
+    pending: List[tuple[date, date]] = [(start, end)]
+    buckets: List[Bucket] = []
+    approx_accum = 0
+    target_limit = int(target * overshoot)
+
+    while pending and approx_accum < target_limit:
+        current_start, current_end = pending.pop()
+        count = _count_range(current_start, current_end)
+        if count <= threshold or current_start >= current_end:
+            buckets.append(Bucket(current_start, current_end, count))
+            effective = max(1, min(count, threshold))
+            approx_accum += effective
+            continue
+        print(
+            f"Splitting bucket {current_start.isoformat()}..{current_end.isoformat()} (≈{count} repos)",
+            flush=True,
+        )
+        span_days = (current_end - current_start).days
+        mid = current_start + timedelta(days=span_days // 2)
+        right_start = (mid + timedelta(days=1))
+        if right_start > current_end:
+            right_start = current_end
+        pending.append((right_start, current_end))
+        pending.append((current_start, mid))
+
+    buckets.sort(key=lambda b: b.start)
+    return buckets
+
+
+def build_buckets(start: date, end: date, threshold: int, target: int, overshoot: float) -> List[Bucket]:
+    return split_buckets(start, end, threshold=threshold, target=target, overshoot=overshoot)
 
 
 def parse_date(value: str) -> date:
@@ -206,7 +227,13 @@ def main():
             return
 
     print(f"Building creation date buckets from {since.isoformat()} to {bucket_end.isoformat()} (threshold={args.bucket_threshold})... this may take a minute.")
-    buckets = build_buckets(since, bucket_end, threshold=args.bucket_threshold)
+    buckets = build_buckets(
+        since,
+        bucket_end,
+        threshold=args.bucket_threshold,
+        target=target,
+        overshoot=BUCKET_OVERSHOOT,
+    )
     approx_total = sum(max(1, b.approx_count) for b in buckets)
     print(f"Built {len(buckets)} buckets covering ≈{approx_total} repos.")
 
