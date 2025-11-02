@@ -18,17 +18,17 @@ The default crawl targets 100k repos and consistently finishes under ~20–25 mi
 
 ## Local quickstart
 
-### 0) Requirements
+### 1) Requirements
 - Docker & Docker Compose
 - Python 3.11+ (if you want to run locally outside CI)
 
-### 1) Start Postgres in Docker
+### 2) Start Postgres in Docker
 ```bash
 docker compose up -d
 # or (Compose v1) docker-compose up -d
 ```
 
-### 2) Create `.env` from example and set GITHUB_TOKEN
+### 3) Create `.env` from example and set GITHUB_TOKEN
 ```bash
 cp .env.example .env
 # Required: paste a personal access token with public_repo scope
@@ -37,14 +37,14 @@ cp .env.example .env
 
 > On GitHub Actions, a default `GITHUB_TOKEN` is automatically injected and is sufficient.
 
-### 3) Initialize schema
+### 4) Initialize schema
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 python scripts/init_db.py
 ```
 
-### 4) Run the crawler (fetch 100k repos)
+### 5) Run the crawler (fetch 100k repos)
 ```bash
 python -m gitcrawler.crawl_stars
 ```
@@ -55,7 +55,7 @@ To do a quick local smoke test without a long bucket build, scope the query and 
 python -m gitcrawler.crawl_stars --recent-days 30 --simple
 ```
 
-### 5) Export as CSV
+### 6) Export as CSV
 ```bash
 python -m gitcrawler.crawl_stars --export csv --out data/export.csv
 ```
