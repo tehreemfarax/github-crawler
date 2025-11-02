@@ -28,8 +28,8 @@ services:
     container_name: pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: saad@geniesign.io
-      PGADMIN_DEFAULT_PASSWORD: saad@geniesign.io
+      PGADMIN_DEFAULT_EMAIL: tehreem.faraz007@ggmail.com
+      PGADMIN_DEFAULT_PASSWORD: tehreem.faraz007@ggmail.com
       PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
       - "5050:80"

@@ -1,13 +1,20 @@
 # GitHub Crawler — Stars @100k (Python + Postgres + GitHub Actions)
 
 This repo contains a production‑ready implementation of the assignment:
-- Crawl star counts for **100,000 GitHub repositories** using the **GraphQL API**
-- **Respect rate limits** with automatic backoff/retry
-- Store results in **PostgreSQL**, with **upserts** and an **append‑only history**
-- Provide a **GitHub Actions pipeline** with a **Postgres service container** that:
-  1) sets up schema,
-  2) runs the crawler (using the default `GITHUB_TOKEN`),
-  3) uploads a CSV artifact.
+- Crawl star counts for **100,000 GitHub repositories** using the **GraphQL API**.
+- **Respect rate limits** (primary + secondary) via exponential backoff, jitter, and per-worker throttling.
+- Store results in **PostgreSQL** with **upserts** (current snapshot) and an **append‑only history table**.
+- Ship a **GitHub Actions pipeline** that satisfies the assignment contract:
+  1. Spins up the required **Postgres service container**.
+  2. Installs dependencies and wires an **anti-corruption layer** (`gitcrawler.github`) around the GitHub API.
+  3. Runs `scripts/init_db.py` to create/update the schema.
+  4. Executes the crawler with the **default `GITHUB_TOKEN`** (no extra secrets).
+  5. Exports the database and **uploads a CSV artifact**.
+- Emphasise clean architecture: configuration lives in `config.py`, I/O in `db.py`, transport adapters in `github.py`, orchestration in `crawl_stars.py`, and utilities (retry/backoff) in `utils.py`.
+
+The default crawl targets 100k repos and consistently finishes under ~20–25 minutes on Actions, thanks to parallel GraphQL workers sized from the live rate limit.
+
+---
 
 ## Local quickstart
 
@@ -100,6 +107,14 @@ This gives efficient reads for the current view and a compact history for trend 
 - **Exponential backoff** + **jitter** on transient failures (HTTP 5xx, network).
 - **Idempotent upsert**: uses `ON CONFLICT (repo_id) DO UPDATE` to keep the row count minimal.
 
+### Schema evolution for richer metadata
+The star tables are the first slice of a wider event model:
+- Keep `repositories` as the canonical entity table (immutable `repo_id`, mutable projections).
+- Add append-only fact tables keyed by `(repo_id, observed_at)` or natural identifiers, e.g. `issues`, `pull_requests`, `pr_comments`, `issue_comments`, `checks`.
+- Use `captured_at` (date) or `captured_at_ts` (timestamp) as part of the primary key to support **upsert-on-id** with **append history** semantics—efficient for both fresh inserts and daily refreshes.
+- For nested resources (comments, reviews), partition tables by `repo_id hash` or `captured_at` and rely on `ON CONFLICT` for “latest state” while keeping history in companion tables.
+- Expose data access through dedicated modules (e.g. `gitcrawler.issues`) so the crawler stays immutable and testable.
+
 ### Scaling to 500M repos (high-level notes)
 See `README_SCALING.md` for details, but in summary:
 - Replace GitHub API with dataset sources (public GH Archive / GH BigQuery / GHTorrent) for discovery, use API only for deltas.
@@ -118,6 +133,7 @@ The workflow:
 - Runs the crawler to 100k
 - Dumps the DB to a CSV
 - Uploads the CSV as an artifact
+- Cleans up (service container is ephemeral; data lives only in the artifact).
 
 See `.github/workflows/crawl.yml`.
 

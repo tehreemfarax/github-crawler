@@ -1,6 +1,5 @@
 from __future__ import annotations
-import sys
-from typing import Optional, Tuple, Dict, Any, Iterable
+from typing import Optional, Dict, Any
 from .config import SETTINGS
 from .utils import http_post_json, TransientError
 import time
