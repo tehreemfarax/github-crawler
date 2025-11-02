@@ -15,6 +15,7 @@ from .utils import TransientError
 TARGET_REPOS = 100_000
 JOB_DIVISOR = 2_100_000
 BUCKET_OVERSHOOT = 1.4
+JOB_OVERSHOOT = 1.2
 
 
 @dataclass(frozen=True)
@@ -247,7 +248,7 @@ def main():
 
     print(f"Launching {workers} worker process(es) across {len(jobs)} job(s) to reach target {target}.")
 
-    job_target = max(1, math.ceil(target / len(jobs)))
+    job_target = max(1, math.ceil((target * JOB_OVERSHOOT) / len(jobs)))
     collected: List[dict] = []
     seen_ids = set()
     with ProcessPoolExecutor(max_workers=workers) as executor:
