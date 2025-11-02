@@ -1,7 +1,9 @@
 from __future__ import annotations
+import os
+from datetime import date
+
 import psycopg
 from psycopg.rows import dict_row
-from datetime import date
 
 from .config import SETTINGS
 
@@ -38,6 +40,9 @@ def export_csv(path: str):
         with conn.cursor() as cur:
             cur.execute("SELECT repo_id, owner, name, full_name, stars, html_url, updated_at, first_seen FROM repositories ORDER BY stars DESC")
             rows = cur.fetchall()
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=rows[0].keys() if rows else ["repo_id","owner","name","full_name","stars","html_url","updated_at","first_seen"])
         writer.writeheader()
