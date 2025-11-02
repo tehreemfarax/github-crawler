@@ -2,8 +2,9 @@ from __future__ import annotations
 import sys
 from typing import Optional, Tuple, Dict, Any, Iterable
 from .config import SETTINGS
-from .utils import http_post_json
+from .utils import http_post_json, TransientError
 import time
+from tenacity import retry, stop_after_attempt, wait_exponential_jitter, retry_if_exception_type
 
 GQL_ENDPOINT = "https://api.github.com/graphql"
 
@@ -76,8 +77,20 @@ def _headers():
         "Accept": "application/json",
     }
 
+@retry(
+    reraise=True,
+    stop=stop_after_attempt(5),
+    wait=wait_exponential_jitter(initial=2, max=60),
+    retry=retry_if_exception_type(TransientError),
+)
 def gql(query: str, variables: dict) -> dict:
-    return http_post_json(GQL_ENDPOINT, _headers(), {"query": query, "variables": variables})
+    payload = http_post_json(GQL_ENDPOINT, _headers(), {"query": query, "variables": variables})
+    if "errors" in payload and payload["errors"]:
+        messages = "; ".join(err.get("message", "unknown error") for err in payload["errors"])
+        raise TransientError(f"GraphQL error(s): {messages}")
+    if "data" not in payload:
+        raise TransientError("GraphQL response missing 'data' field.")
+    return payload
 
 def count_for_query(q: str) -> int:
     data = gql(COUNT_QUERY, {"q": q})

@@ -26,7 +26,19 @@ class Bucket:
 def split_buckets(start: date, end: date, threshold: int = 900) -> List[Bucket]:
     """Recursively split creation date ranges so each bucket stays under the threshold."""
     q = f"created:{start.isoformat()}..{end.isoformat()}"
-    count = count_for_query(q)
+    for attempt in range(6):
+        try:
+            count = count_for_query(q)
+            break
+        except TransientError as exc:
+            wait_seconds = min(300, 30 * (attempt + 1))
+            print(
+                f"Count query throttled for range {q} ({exc}); sleeping {wait_seconds}s before retry.",
+                flush=True,
+            )
+            time.sleep(wait_seconds)
+    else:
+        raise
     if count <= threshold or start >= end:
         print(f"Accepted bucket {start.isoformat()}..{end.isoformat()} (≈{count} repos)", flush=True)
         return [Bucket(start, end, count)]
